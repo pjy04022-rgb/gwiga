@@ -1,0 +1,16 @@
+{
+  "name": "귀가약속",
+  "short_name": "귀가약속",
+  "description": "술자리 전에 귀가 방법을 정하고, 끝날 때 다시 알려주고, 다음 날 아침 남은 알코올을 보수적으로 추정하는 음주운전 예방 앱",
+  "lang": "ko",
+  "start_url": "./#plan",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#EEF1F4",
+  "theme_color": "#16212B",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

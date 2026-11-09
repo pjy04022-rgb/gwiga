@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>귀가약속</title>
+<meta name="description" content="술자리 전에 귀가 방법을 정하고, 끝날 때 다시 알려주고, 다음 날 아침 남은 알코올을 보수적으로 추정하는 음주운전 예방 앱">
+<meta name="theme-color" content="#16212B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="귀가약속">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!--FONTS-START-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<!--FONTS-END-->
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<!--APP-START-->
+<header class="bar">
+  <div class="bar-in wrap">
+    <a class="brand" href="#plan"><b>귀가약속</b><span>0.03</span></a>
+    <nav class="tabs" aria-label="화면">
+      <a href="#plan" data-tab="plan">술자리 계획</a>
+      <a href="#group" data-tab="group">모임</a>
+      <a href="#pledge" data-tab="pledge">서약 카드</a>
+      <a href="#check" data-tab="check">숙취 계산</a>
+      <a href="#law" data-tab="law">처벌·단속</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ 술자리 계획 ============ -->
+  <section class="view" data-view="plan" aria-labelledby="plan-title">
+
+    <div class="alert" id="alert" role="alert" hidden>
+      <span class="alert-eb">술자리가 끝날 시간입니다</span>
+      <h2 id="al-title">오늘은 택시로 귀가하기로 했습니다</h2>
+      <p id="al-text">맑은 정신일 때 정한 약속입니다. 지금 기분이 괜찮아도 판단력은 이미 흐려져 있을 수 있습니다.</p>
+      <p class="alert-memo" id="al-memo" hidden></p>
+      <div class="btns">
+        <a class="btn on-amber" href="https://map.naver.com/" target="_blank" rel="noopener">네이버 지도</a>
+        <a class="btn on-amber" href="https://map.kakao.com/" target="_blank" rel="noopener">카카오맵</a>
+        <a class="btn on-amber ghost" href="#check" id="al-check">내일 아침 숙취 확인</a>
+        <button class="btn on-amber ghost" type="button" id="al-close">약속대로 귀가할게요</button>
+      </div>
+    </div>
+
+    <!-- 저장된 약속 -->
+    <div class="stack" id="plan-saved" hidden>
+      <div class="head">
+        <span class="eyebrow">오늘의 약속</span>
+        <h1 id="plan-title">맑은 정신일 때 정한 약속입니다</h1>
+      </div>
+      <div class="promise">
+        <p class="promise-big" id="pr-big">오늘은 <em>택시</em>로<br>귀가합니다</p>
+        <dl class="kv">
+          <div><dt>날짜</dt><dd id="pr-date">-</dd></div>
+          <div><dt>끝날 예정</dt><dd id="pr-end">-</dd></div>
+          <div><dt>차</dt><dd id="pr-car">-</dd></div>
+        </dl>
+        <p class="promise-note" id="pr-memo" hidden></p>
+        <p class="promise-note" id="pr-drive" hidden></p>
+        <button class="btn amber block" type="button" id="pr-end-now">술자리 끝났어요</button>
+      </div>
+
+      <div class="actions">
+        <h2 class="sub">끝날 시간에 다시 알려받기</h2>
+        <div class="action-grid">
+          <a class="action" id="pr-gcal" href="#" target="_blank" rel="noopener">
+            <b>구글 캘린더에 추가</b><span>앱을 닫아도 알림이 옵니다</span>
+          </a>
+          <button class="action" type="button" id="pr-ics" hidden>
+            <b>휴대폰 캘린더에 추가</b><span>아이폰·갤럭시 기본 캘린더 (.ics)</span>
+          </button>
+          <button class="action" type="button" id="pr-notify" hidden>
+            <b>앱 알림 켜기</b><span id="pr-notify-sub">앱이 켜져 있을 때 끝날 시간에 알립니다</span>
+          </button>
+          <a class="action" href="#pledge">
+            <b>서약 카드 보내기</b><span>함께 마실 친구에게 약속 알리기</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button class="btn ghost" type="button" id="pr-edit">약속 수정</button>
+        <button class="btn ghost danger" type="button" id="pr-delete">약속 지우기</button>
+      </div>
+    </div>
+
+    <!-- 계획 입력 -->
+    <div class="stack" id="plan-edit">
+      <div class="head">
+        <span class="eyebrow">술자리 전, 맑은 정신일 때</span>
+        <h1>마시기 전에 <em>귀가 방법</em>부터 정하세요</h1>
+        <p class="lead">술을 마신 뒤에는 "가까우니까 괜찮겠지"라는 판단이 쉬워집니다. 지금 정한 약속을 술자리가 끝날 때 다시 보여드립니다.</p>
+      </div>
+
+      <form class="panel" id="plan-form" autocomplete="off" novalidate>
+        <fieldset>
+          <legend><i>1</i>언제 마시나요</legend>
+          <div class="row3">
+            <label for="p-date">날짜<input type="date" id="p-date" required></label>
+            <label for="p-start">시작<input type="time" id="p-start" value="19:00" required></label>
+            <label for="p-end">끝날 예정<input type="time" id="p-end" value="23:00" required></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend><i>2</i>어떻게 돌아가나요</legend>
+          <div class="chips" role="radiogroup" aria-label="귀가 방법">
+            <input type="radio" name="method" id="m-taxi" value="택시" checked><label for="m-taxi">택시</label>
+            <input type="radio" name="method" id="m-daeri" value="대리운전"><label for="m-daeri">대리운전</label>
+            <input type="radio" name="method" id="m-bus" value="심야버스·지하철"><label for="m-bus">심야버스·지하철</label>
+            <input type="radio" name="method" id="m-walk" value="걸어서"><label for="m-walk">걸어서</label>
+            <input type="radio" name="method" id="m-family" value="가족 차"><label for="m-family">가족이 데리러 옴</label>
+            <input type="radio" name="method" id="m-stay" value="근처 숙소"><label for="m-stay">근처에서 자고 감</label>
+          </div>
+          <div>
+            <div class="seglabel" id="car-l">차를 가져가나요?</div>
+            <div class="seg" role="radiogroup" aria-labelledby="car-l">
+              <input type="radio" name="car" id="car-n" value="n" checked><label for="car-n">두고 간다</label>
+              <input type="radio" name="car" id="car-y" value="y"><label for="car-y">가져간다</label>
+            </div>
+          </div>
+          <p class="caution" id="car-warn" hidden>차를 가져간다면 대리운전을 부르거나 차를 두고 다음 날 찾으세요. 다음 날 아침에도 알코올이 남아 있을 수 있습니다.</p>
+          <label for="p-memo">귀가 메모 <small>(선택)</small><input type="text" id="p-memo" maxlength="80" placeholder="예: 강남역 N13 심야버스 00:40 막차"></label>
+        </fieldset>
+
+        <fieldset>
+          <legend><i>3</i>다음 날 아침</legend>
+          <div class="row">
+            <div>
+              <div class="seglabel" id="drv-l">운전할 일이 있나요?</div>
+              <div class="seg" role="radiogroup" aria-labelledby="drv-l">
+                <input type="radio" name="drv" id="drv-n" value="n" checked><label for="drv-n">없음</label>
+                <input type="radio" name="drv" id="drv-y" value="y"><label for="drv-y">있음</label>
+              </div>
+            </div>
+            <label for="p-drive">운전 예정 시각<input type="time" id="p-drive" value="08:00" disabled></label>
+          </div>
+        </fieldset>
+
+        <div class="btns">
+          <button class="btn" type="submit" id="p-save">약속 저장</button>
+          <button class="btn ghost" type="button" id="p-cancel" hidden>취소</button>
+        </div>
+        <p class="hint">입력한 내용은 이 기기에만 저장되고 어디로도 전송되지 않습니다. 이름, 연락처, 위치는 묻지 않습니다.</p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ 모임 ============ -->
+  <section class="view" data-view="group" aria-label="모임" hidden>
+    <div id="group-root"></div>
+  </section>
+
+  <!-- ============ 서약 카드 ============ -->
+  <section class="view" data-view="pledge" aria-labelledby="pledge-title" hidden>
+    <div class="head">
+      <span class="eyebrow">함께 마실 친구에게</span>
+      <h1 id="pledge-title">약속은 <em>보여줄 때</em> 지키기 쉬워집니다</h1>
+      <p class="lead">서약 카드를 단체 대화방에 올려 두면, 술자리 끝에 친구가 약속을 대신 기억해 줄 수 있습니다.</p>
+    </div>
+    <p class="caution" id="pl-nosave" hidden>아직 저장한 약속이 없어 예시로 보여줍니다. <a href="#plan">술자리 계획</a>에서 약속을 먼저 저장하세요.</p>
+    <div class="pledge-grid">
+      <canvas id="card" width="1080" height="1350" role="img" aria-label="귀가 서약 카드"></canvas>
+      <div class="panel">
+        <label for="pl-sign">카드에 넣을 별명 <small>(선택, 저장되지 않음)</small><input type="text" id="pl-sign" maxlength="12" placeholder="예: 경찰학과 24학번"></label>
+        <label for="pl-text">함께 보낼 문구<textarea id="pl-text" rows="5" readonly></textarea></label>
+        <div class="btns">
+          <button class="btn" type="button" id="pl-share" hidden>카드 공유하기</button>
+          <button class="btn ghost" type="button" id="pl-save" hidden>이미지 저장</button>
+          <button class="btn ghost" type="button" id="pl-copy">문구 복사</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 숙취 계산 ============ -->
+  <section class="view" data-view="check" aria-labelledby="check-title" hidden>
+    <div class="head">
+      <span class="eyebrow">다음 날 아침</span>
+      <h1 id="check-title">잠을 자도 알코올은 <em>시간</em>만큼만 빠집니다</h1>
+      <p class="lead">단속 기준은 혈중알코올농도 0.03%입니다. 마신 양과 시각을 넣으면 운전하려는 시각에 남아 있을 수 있는 알코올을 분해가 느린 사람 기준으로 추정합니다.</p>
+    </div>
+    <p class="rule"><b>원칙</b><span>이 앱은 어떤 수치가 나와도 운전 여부를 판정하지 않습니다. 결과는 경고용 추정치입니다.</span></p>
+
+    <div class="checker">
+      <form class="panel" id="calc-form" autocomplete="off">
+        <fieldset>
+          <legend>나의 정보</legend>
+          <div class="row">
+            <div>
+              <div class="seglabel" id="sex-l">성별</div>
+              <div class="seg" role="radiogroup" aria-labelledby="sex-l">
+                <input type="radio" name="sex" id="sex-m" value="m" checked><label for="sex-m">남성</label>
+                <input type="radio" name="sex" id="sex-f" value="f"><label for="sex-f">여성</label>
+              </div>
+            </div>
+            <label for="weight">체중 (kg)<input type="number" id="weight" min="30" max="200" step="1" value="70" inputmode="numeric"></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>마신 술 <small id="drink-total"></small></legend>
+          <ul class="drinks" id="drinks"></ul>
+        </fieldset>
+        <fieldset>
+          <legend>시각</legend>
+          <div class="row3">
+            <label for="t-start">마시기 시작<input type="time" id="t-start" value="21:00"></label>
+            <label for="t-end">마지막 잔<input type="time" id="t-end" value="01:00"></label>
+            <label for="t-drive">운전 예정<input type="time" id="t-drive" value="08:00"></label>
+          </div>
+          <p class="hint">앞선 시각보다 이른 시각은 다음 날로 계산합니다. 약속을 저장했다면 그 시각을 불러옵니다.</p>
+        </fieldset>
+      </form>
+
+      <div class="result" id="result" aria-live="polite">
+        <div>
+          <div class="cap">운전 예정 <span id="r-drive">08:00</span> · 보수적 추정</div>
+          <div class="lcd" id="lcd">0.000<small>%</small></div>
+        </div>
+        <div class="verdict" id="verdict"></div>
+        <dl class="facts">
+          <div><dt>최고 추정 농도</dt><dd id="f-peak">-</dd></div>
+          <div><dt>0.03% 아래로</dt><dd id="f-03">-</dd></div>
+          <div><dt>계산상 0</dt><dd id="f-zero">-</dd></div>
+        </dl>
+        <svg class="chart" id="chart" viewBox="0 0 600 260" role="img" aria-label="시간에 따른 혈중알코올농도 추정 그래프"></svg>
+        <div class="legend">
+          <span><i class="lg-con"></i>보수적 추정 (분해 느린 사람)</span>
+          <span><i class="lg-avg"></i>평균적 추정</span>
+          <span><i class="lg-lim"></i>단속 기준선</span>
+        </div>
+        <p class="disclaimer">위드마크(Widmark) 공식을 이용한 교육용 추정치입니다. 체내흡수율 70%, 위드마크 계수 남 0.7·여 0.6(보수적 추정은 각 0.1 낮춤), 시간당 분해량 평균 0.015%·보수적 0.008%를 적용했고, 분해는 마지막 잔부터 시작한다고 가정했습니다. 실제 농도는 건강 상태, 식사, 수면, 약물에 따라 크게 달라집니다. <b>이 결과로 운전 여부를 판단하지 마세요.</b></p>
+      </div>
+    </div>
+
+    <a class="mini" id="mini" href="#result" hidden>
+      <span class="mini-v" id="mini-v">0.000%</span>
+      <span class="mini-t" id="mini-t">운전 예정 시각 추정 농도</span>
+    </a>
+  </section>
+
+  <!-- ============ 처벌·단속 ============ -->
+  <section class="view" data-view="law" aria-labelledby="law-title" hidden>
+    <div class="head">
+      <span class="eyebrow">도로교통법 [시행 2026. 10. 13.] 제148조의2 · 제93조</span>
+      <h1 id="law-title">음주운전은 <em>수치</em>로 처벌이 정해집니다</h1>
+      <p class="lead">형사처벌(징역·벌금)과 행정처분(면허 정지·취소)은 따로 적용됩니다. 재범은 음주운전·측정거부·측정방해로 벌금 이상의 형이 확정된 날부터 10년 안에 다시 위반한 경우이며, 형이 실효된 사람도 포함합니다. 개인형 이동장치(전동킥보드 등)를 운전한 경우는 재범 가중 대상에서 제외됩니다.</p>
+    </div>
+
+    <div class="block">
+      <h2>수치별 처벌 기준</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>혈중알코올농도</th><th>처음 위반 (제3항·제2항)</th><th>재범 (제1항, 10년 내)</th><th>면허</th></tr></thead>
+          <tbody>
+            <tr><td><span class="band b1"><i></i>0.03 ~ 0.08%</span></td><td>1년 이하 징역 또는 500만 원 이하 벌금</td><td rowspan="2">1년 이상 5년 이하 징역 또는 500만 원 이상 2천만 원 이하 벌금</td><td><span class="pill p-stop">정지 · 벌점 100</span></td></tr>
+            <tr><td><span class="band b2"><i></i>0.08 ~ 0.2%</span></td><td>1년 이상 2년 이하 징역 또는 500만 원 이상 1천만 원 이하 벌금</td><td><span class="pill p-cancel">취소</span></td></tr>
+            <tr><td><span class="band b3"><i></i>0.2% 이상</span></td><td>2년 이상 5년 이하 징역 또는 1천만 원 이상 2천만 원 이하 벌금</td><td>2년 이상 6년 이하 징역 또는 1천만 원 이상 3천만 원 이하 벌금</td><td><span class="pill p-cancel">취소</span></td></tr>
+            <tr><td><b>측정거부 · 측정방해</b><br><small class="muted">술타기 등</small></td><td>1년 이상 5년 이하 징역 또는 500만 원 이상 2천만 원 이하 벌금</td><td>1년 이상 6년 이하 징역 또는 500만 원 이상 3천만 원 이하 벌금</td><td><span class="pill p-cancel">취소</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="grid2">
+        <div class="box"><h3>술타기도 처벌</h3><p>운전 후 술을 더 마셔 측정을 어렵게 하는 <b>측정방해 행위</b>는 2025년 6월부터 측정거부와 같은 수준으로 처벌합니다.</p></div>
+        <div class="box"><h3>사고를 내면</h3><p>특정범죄가중처벌법상 위험운전치사는 <b>무기 또는 3년 이상 징역</b>, 치상은 1년 이상 15년 이하 징역 또는 1천만~3천만 원 벌금입니다.</p></div>
+      </div>
+    </div>
+
+    <div class="block">
+      <h2>단속은 이렇게 진행됩니다</h2>
+      <ol class="steps">
+        <li data-n="1"><h3>감지기로 선별</h3><p>검문 지점에서 음주감지기로 알코올 반응이 있는 운전자를 먼저 가려냅니다. 반응이 나오면 차를 안전한 곳에 세우도록 안내받습니다.</p></li>
+        <li data-n="2"><h3>입 헹굼 후 호흡측정</h3><p>입안에 남은 알코올이 수치를 높이지 않도록 물로 입을 헹군 뒤 음주측정기에 숨을 불어 넣습니다.</p></li>
+        <li data-n="3"><h3>결과 고지와 확인</h3><p>측정 수치를 운전자에게 알리고 확인 서명을 받습니다. 측정 요구에 계속 응하지 않으면 측정거부로 처리됩니다.</p></li>
+        <li data-n="4"><h3>불복하면 채혈 측정</h3><p>호흡측정 결과에 동의하지 않으면 혈액 채취로 다시 측정해 달라고 요구할 수 있습니다. 채혈 결과가 더 높게 나올 수도 있습니다.</p></li>
+        <li data-n="5"><h3>처분과 입건</h3><p>수치에 따라 면허 정지 또는 취소 처분이 진행되고, 형사 사건으로 입건되어 수사를 받습니다.</p></li>
+      </ol>
+    </div>
+
+    <footer class="sources">
+      <b>참고 자료</b>
+      <ul>
+        <li>도로교통법 [시행 2026. 10. 13.] 제44조, 제148조의2, 제93조 (국가법령정보센터)</li>
+        <li>특정범죄 가중처벌 등에 관한 법률 제5조의11</li>
+        <li>찾기쉬운 생활법령정보 「술에 취한 상태 등의 운전 금지」</li>
+      </ul>
+      <p>법령은 개정될 수 있으니 국가법령정보센터(law.go.kr)에서 현행 조문을 확인하세요. 경찰학 캡스톤디자인 과제 · 교육용 정보이며 법률 자문이 아닙니다.</p>
+    </footer>
+  </section>
+</main>
+
+<nav class="dock" aria-label="화면">
+  <a href="#plan" data-tab="plan"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>계획</a>
+  <a href="#group" data-tab="group"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.2c2.7.2 4.5 2.2 4.5 5"/></svg>모임</a>
+  <a href="#pledge" data-tab="pledge"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg>서약</a>
+  <a href="#check" data-tab="check"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M10 2h4"/></svg>숙취</a>
+  <a href="#law" data-tab="law"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 7h14M7 7l-3 7h6zM17 7l-3 7h6zM8 21h8"/></svg>처벌</a>
+</nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<!--APP-END-->
+
+<script src="js/util.js"></script>
+<script src="js/model.js"></script>
+<script src="js/group-logic.js"></script>
+<script src="js/plan.js"></script>
+<script src="js/pledge.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/group-store.js"></script>
+<script src="js/group.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
