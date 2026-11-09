@@ -21,6 +21,7 @@
   };
 
   function endAt(room) {
+    if (room.endsAt) return Date.parse(room.endsAt);       // 서버가 정한 끝 시각
     var s = new Date(room.date + 'T' + room.start), e = new Date(room.date + 'T' + room.end);
     if (e <= s) e.setDate(e.getDate() + 1);
     return e.getTime();

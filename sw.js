@@ -1,8 +1,8 @@
 /* 오프라인 캐시. 앱 파일을 고치면 CACHE 버전을 올린다. */
-var CACHE = 'gwiga-v2';
+var CACHE = 'gwiga-v3';
 var SHELL = [
   './', 'index.html', 'css/style.css',
-  'js/util.js', 'js/model.js', 'js/group-logic.js', 'js/plan.js', 'js/pledge.js', 'js/calc.js',
+  'js/util.js', 'js/model.js', 'js/group-logic.js', 'js/config.js', 'js/plan.js', 'js/pledge.js', 'js/calc.js',
   'js/group-store.js', 'js/group.js', 'js/main.js',
   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'
 ];

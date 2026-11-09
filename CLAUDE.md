@@ -19,36 +19,39 @@ css/style.css           디자인 토큰(:root)과 전체 스타일, 라이트/�
 js/util.js              공용 함수 (저장소, 날짜, 조사 처리, 토스트, 화면 간 이벤트)
 js/model.js             숙취 계산식(위드마크) — 순수 함수
 js/group-logic.js       모임 모드 규칙(상태 판정, 참가 검증, 마무리 조건) — 순수 함수
+js/config.js            모임 모드 서버 설정(Supabase 주소·공개 키). 비우면 시연판으로 열림
 js/plan.js              술자리 계획, 종료 알림, 캘린더(.ics·구글)
 js/pledge.js            귀가 서약 카드(캔버스), 공유·저장·복사
 js/calc.js              숙취 계산기 화면
-js/group-store.js       모임 데이터 저장소 — 지금은 이 기기 안에서만 동작하는 시연판(LocalStore)
-js/group.js             모임 화면(목록·만들기, 참가, 현황판, 시연용 화면 전환)
+js/group-store.js       모임 데이터 저장소 — 서버(Supabase 함수 호출, 5초마다 새로 고침) / 이 기기 시연판
+js/group.js             모임 화면(목록·만들기·코드 참가, 참가, 현황판, 시연판일 때만 화면 전환)
 js/main.js              화면 전환(해시 라우팅), 서비스 워커 등록, 시작
 sw.js                   오프라인 캐시 (파일을 고치면 CACHE 버전을 올린다)
 manifest.webmanifest    홈 화면 설치 정보
 icons/                  앱 아이콘
 tools/build_artifact.py claude.ai 아티팩트용 단일 HTML 만들기 → dist/artifact.html
-tools/check.mjs         계산식 점검 스크립트 (node tools/check.mjs)
+supabase/schema.sql     서버: 테이블, 직접 접근 차단, 강제 규칙을 검사하는 gwiga_* 함수, 24시간 뒤 자동 삭제
+supabase/test.sql       서버 규칙 시험(로컬 Postgres에서 anon 역할로 실행)
+supabase/README.md      Supabase 설정 방법
+tools/check.mjs         계산식·모임 규칙 점검 스크립트 (node tools/check.mjs)
 ```
 
 빌드 도구 없이 정적 파일만으로 동작한다. 스크립트는 ES 모듈이 아닌 일반 스크립트이고 `window.Gwiga` 하나에 기능을 묶는다.
 
-## 다음 단계: 모임 모드 서버 연결
+## 모임 모드 서버 (Supabase)
 
-지금 모임 모드는 한 기기 안에서만 동작한다(발표 시연용). 여러 사람이 각자 휴대폰으로 참가하려면:
-
-1. `js/group-store.js` 맨 위 주석의 함수 목록(listRooms, createRoom, getRoom, addMember, updateMember, closeRoom, deleteRoom, subscribe)을 그대로 갖춘 서버 저장소를 새 파일(예: `js/group-store-supabase.js`)로 만들고, 설정이 있으면 `G.groupStore`를 그것으로 바꾼다. `group.js`는 고치지 않는다.
-2. 서버(예: Supabase 무료 요금제)에는 rooms, members 두 테이블만 둔다. 저장 항목은 별명·귀가 방법·차 여부·키 확인 상태뿐이다.
-3. 참가 검증, 귀가 완료 제한, 마무리 조건(group-logic.js)을 서버 쪽(DB 함수 또는 정책)에서도 검사한다. 화면만 막으면 우회할 수 있다.
-4. 방은 끝난 시각 24시간 뒤 자동 삭제한다(예약 작업).
-5. 총무·참가자 구분은 이 기기에 저장한 비밀 토큰으로 한다. 로그인이나 연락처는 받지 않는다.
-6. 서버 연결 후에는 시연용 화면 전환(demo-bar)이 `S.mode === 'local'`일 때만 보이는지 확인한다.
+- 앱은 테이블을 직접 읽거나 쓰지 않는다. `supabase/schema.sql`의 `gwiga_*` 함수만 부른다(REST: `/rest/v1/rpc/함수이름`).
+- 강제 규칙은 `js/group-logic.js`(화면)와 `supabase/schema.sql`(서버) 두 곳에 있다. 규칙을 바꾸면 **두 곳을 함께** 고치고 둘 다 시험한다.
+- 총무·참가자 구분은 기기 localStorage(`gwiga-mine-v1`)의 비밀 토큰으로 한다. 서버에는 해시만 저장한다. 로그인·연락처는 받지 않는다.
+- 공개 키(publishable/anon)는 config.js에 넣어 GitHub에 올려도 된다. service_role 키나 secret 키는 절대 넣지 않는다.
+- 스키마를 바꾸면 Supabase SQL Editor에서 schema.sql을 다시 실행해야 한다(여러 번 실행해도 안전).
+- 시연판(`S.mode === 'local'`)에서만 예시 모임·화면 전환·끝날 시간 건너뛰기가 보인다.
 
 ## 작업 규칙
 
 - 로컬 확인: `python3 -m http.server 8000` 후 http://localhost:8000 (서비스 워커는 file://에서 동작하지 않음)
 - 계산식이나 모임 규칙을 바꾸면 `node tools/check.mjs`를 돌린다.
+- 서버 규칙을 바꾸면 로컬 Postgres에 schema.sql을 불러온 뒤 `psql -v ON_ERROR_STOP=1 -f supabase/test.sql`로 시험한다(anon·authenticated 역할을 먼저 만들 것).
 - 파일을 바꾸면 `sw.js`의 `CACHE` 값을 올려야 설치된 앱이 새 버전을 받는다.
 - 색은 css의 토큰(`--ink`, `--accent` 등)으로만 쓰고, 라이트/다크 둘 다 확인한다.
 - 화면 문구를 추가하면 위 1번 원칙의 금지 표현이 없는지 검색한다: `grep -rn "운전 가능\|안전합\|괜찮습\|운전해도" index.html js/`
