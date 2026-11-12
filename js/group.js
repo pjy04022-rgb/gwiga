@@ -398,10 +398,10 @@
   }
 
   function hostCard(r, ms, ended, joined) {
-    var link = location.href.split('#')[0] + '#join-' + r.code;
+    var link = (G.native ? G.webUrl : location.href.split('#')[0]) + '#join-' + r.code;
     var block = r.closed ? '' : L.closeBlock(ms, ended);
     var shareText = '[귀가약속] ' + r.title + ' (' + timeRange(r) + ')\n귀가 방법을 정하고 참가해 주세요. 코드 ' + r.code;
-    var canShare = !G.inArtifact && !!navigator.share;
+    var canShare = !!G.native || (!G.inArtifact && !!navigator.share);
 
     var delArmed = false;
     var delBtn = h('button', { class: 'btn ghost danger small', type: 'button', text: '모임 지우기' });
@@ -420,7 +420,8 @@
         h('button', { class: 'btn small', type: 'button', text: '복사', onclick: function () { G.copyText(shareText + '\n' + link, $('g-link')); } })
       ]),
       canShare ? h('div', { class: 'btns' }, [h('button', { class: 'btn amber', type: 'button', text: '카카오톡 등으로 보내기', onclick: function () {
-        navigator.share({ title: '귀가약속 · ' + r.title, text: shareText, url: link }).catch(function () {});
+        var data = { title: '귀가약속 · ' + r.title, text: shareText, url: link };
+        (G.native ? G.native.share(data) : navigator.share(data)).catch(function () {});
       } })]) : null,
       LOCAL ? h('p', { class: 'hint', text: '시연판에서는 이 링크가 모임을 만든 기기에서만 열립니다.' }) : null,
       (!joined && !LOCAL && !r.closed) ? h('div', { class: 'btns' }, [h('button', { class: 'btn ghost', type: 'button', text: '나도 참가자로 등록하기', onclick: function () { joinMode = true; go('join-' + r.code); } })]) : null,

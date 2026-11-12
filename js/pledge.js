@@ -83,20 +83,22 @@
   }
 
   /* 공유: 휴대폰에서 바로 카카오톡 등으로 보내기 */
-  var canShareFiles = false;
-  if (!G.inArtifact && navigator.canShare) {
+  var canShareFiles = !!G.native;
+  if (!G.native && !G.inArtifact && navigator.canShare) {
     try { canShareFiles = navigator.canShare({ files: [new File([new Blob(['x'])], 'x.png', { type: 'image/png' })] }); } catch (e) {}
   }
   $('pl-share').hidden = !canShareFiles;
   $('pl-share').addEventListener('click', function () {
     cardBlob().then(function (b) {
+      if (G.native) return G.native.shareFile('귀가약속-카드.png', b, $('pl-text').value);
       var file = new File([b], '귀가약속-카드.png', { type: 'image/png' });
       return navigator.share({ files: [file], text: $('pl-text').value });
     }).catch(function (err) { if (err && err.name !== 'AbortError') G.toast('공유하지 못했습니다. 이미지 저장을 이용하세요.'); });
   });
 
   /* 이미지 저장 */
-  if (G.inArtifact) G.artifactDownloads().then(function (d) { $('pl-save').hidden = !d; });
+  if (G.native) $('pl-save').hidden = true; /* 앱에서는 '카드 공유하기'의 공유 창에서 저장한다 */
+  else if (G.inArtifact) G.artifactDownloads().then(function (d) { $('pl-save').hidden = !d; });
   else $('pl-save').hidden = false;
   $('pl-save').addEventListener('click', function () {
     cardBlob().then(function (b) { return G.saveFile('귀가약속-카드.png', b); })

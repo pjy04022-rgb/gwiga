@@ -17,6 +17,7 @@
 index.html              화면 마크업 (다섯 화면: #plan #group #pledge #check #law, 모임은 #room-코드 #join-코드)
 css/style.css           디자인 토큰(:root)과 전체 스타일, 라이트/다크 테마
 js/util.js              공용 함수 (저장소, 날짜, 조사 처리, 토스트, 화면 간 이벤트)
+js/native.js           설치형 앱(안드로이드)에서만 쓰는 기능: 공유 창, 파일 내보내기, 예약 알림. 웹에서는 G.native가 null
 js/model.js             숙취 계산식(위드마크) — 순수 함수
 js/group-logic.js       모임 모드 규칙(상태 판정, 참가 검증, 마무리 조건) — 순수 함수
 js/config.js            모임 모드 서버 설정(Supabase 주소·공개 키). 비우면 시연판으로 열림
@@ -34,6 +35,7 @@ supabase/schema.sql     서버: 테이블, 직접 접근 차단, 강제 규칙�
 supabase/test.sql       서버 규칙 시험(로컬 Postgres에서 anon 역할로 실행)
 supabase/README.md      Supabase 설정 방법
 tools/check.mjs         계산식·모임 규칙 점검 스크립트 (node tools/check.mjs)
+app/                    안드로이드 앱(Capacitor). 웹 파일을 app/www로 복사해 APK를 만든다 — app/README.md
 ```
 
 빌드 도구 없이 정적 파일만으로 동작한다. 스크립트는 ES 모듈이 아닌 일반 스크립트이고 `window.Gwiga` 하나에 기능을 묶는다.

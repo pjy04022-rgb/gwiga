@@ -1,0 +1,19 @@
+{
+  "name": "gwiga-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "귀가약속 안드로이드 앱 (Capacitor)",
+  "scripts": {
+    "www": "node build-www.mjs",
+    "sync": "node build-www.mjs && cap sync android",
+    "apk": "node build-www.mjs && cap sync android && cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/share": "^8.0.3"
+  }
+}

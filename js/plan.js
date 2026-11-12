@@ -87,20 +87,38 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  /* ---------- 앱 알림 (앱이 켜져 있을 때) ---------- */
-  var canNotify = 'Notification' in window && !G.inArtifact;
+  /* ---------- 앱 알림 ----------
+   * 웹: 앱이 켜져 있을 때만 울린다.
+   * 설치형 앱(G.native): 휴대폰에 예약해 두어 앱을 꺼 두어도 울린다. 다음 날 운전 예정이면 운전 30분 전에도 알린다.
+   */
+  var NATIVE = G.native;
+  var canNotify = !!NATIVE || ('Notification' in window && !G.inArtifact);
+  var nativePerm = 'prompt';
+  function perm() { return NATIVE ? nativePerm : Notification.permission; }
   function notifyLabel() {
     if (!canNotify) return;
-    var on = G.store.get(NOTIFY) && Notification.permission === 'granted';
+    var on = G.store.get(NOTIFY) && perm() === 'granted';
     $('pr-notify').classList.toggle('done', !!on);
     $('pr-notify').querySelector('b').textContent = on ? '앱 알림 켜짐' : '앱 알림 켜기';
-    $('pr-notify-sub').textContent = Notification.permission === 'denied'
-      ? '브라우저 설정에서 알림이 막혀 있습니다'
+    $('pr-notify-sub').textContent = perm() === 'denied'
+      ? (NATIVE ? '휴대폰 설정에서 알림이 막혀 있습니다' : '브라우저 설정에서 알림이 막혀 있습니다')
+      : NATIVE ? (on ? '앱을 꺼 두어도 끝날 시간에 알립니다' : '앱을 꺼 두어도 끝날 시간에 알려 줍니다')
       : (on ? '앱이 켜져 있으면 끝날 시간에 알립니다' : '앱이 켜져 있을 때 끝날 시간에 알립니다');
   }
+  var NOTIFY_TITLE = '술자리 끝날 시간입니다';
+  function notifyBody(p) {
+    return '오늘은 ' + (p.method === '근처 숙소' ? '근처에서 자고 가기로 했습니다.' : phrase(p.method) + ' 귀가하기로 했습니다.') + ' 맑은 정신일 때 정한 약속입니다.';
+  }
+  function nativeAlarms(p) {
+    var list = [{ kind: 'end', title: NOTIFY_TITLE, body: notifyBody(p), at: endDate(p) }];
+    if (p.drv === 'y') list.push({ kind: 'drive', title: '운전 전 숙취 확인',
+      body: '어젯밤 술자리 뒤 ' + p.drive + '에 운전할 예정입니다. 알코올이 남아 있을 수 있으니 숙취 계산기로 확인하고, 조금이라도 의심되면 운전하지 마세요.',
+      at: new Date(driveDate(p).getTime() - 30 * 60000) });
+    return list;
+  }
   function fireNotification(p) {
-    var title = '술자리 끝날 시간입니다';
-    var body = '오늘은 ' + (p.method === '근처 숙소' ? '근처에서 자고 가기로 했습니다.' : phrase(p.method) + ' 귀가하기로 했습니다.') + ' 맑은 정신일 때 정한 약속입니다.';
+    var title = NOTIFY_TITLE;
+    var body = notifyBody(p);
     var opts = { body: body, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag: 'gwiga-end' };
     if (navigator.serviceWorker && navigator.serviceWorker.controller) {
       navigator.serviceWorker.ready.then(function (reg) { reg.showNotification(title, opts); });
@@ -110,7 +128,9 @@
   }
   function scheduleNotify() {
     clearTimeout(notifyTimer);
-    if (!canNotify || !saved || !G.store.get(NOTIFY) || Notification.permission !== 'granted') return;
+    var on = canNotify && saved && G.store.get(NOTIFY) && perm() === 'granted';
+    if (NATIVE) { NATIVE.setAlarms(on ? nativeAlarms(saved) : []).catch(function () {}); return; }
+    if (!on) return;
     var ms = endDate(saved).getTime() - Date.now();
     if (ms > 0 && ms < 24 * 3600000) notifyTimer = setTimeout(function () { fireNotification(saved); checkAlert(); }, ms);
   }
@@ -175,7 +195,7 @@
     if (!delArmed) { delArmed = true; this.textContent = '한 번 더 누르면 지웁니다'; var b = this; setTimeout(function () { delArmed = false; b.textContent = '약속 지우기'; }, 4000); return; }
     delArmed = false; this.textContent = '약속 지우기';
     saved = null; G.store.set(KEY, null); G.store.set(DISMISS, null);
-    $('alert').hidden = true; clearTimeout(notifyTimer);
+    $('alert').hidden = true; scheduleNotify();
     $('p-date').value = G.todayStr();
     render(); G.toast('약속을 지웠습니다.'); G.emit('plan');
   });
@@ -189,19 +209,20 @@
   $('pr-ics').addEventListener('click', function () {
     if (!saved) return;
     var blob = new Blob([buildIcs(saved)], { type: 'text/calendar;charset=utf-8' });
-    G.saveFile('귀가약속.ics', blob).then(function () { G.toast('캘린더 파일을 열어 일정에 추가하세요.'); }, function () {});
+    G.saveFile('귀가약속.ics', blob).then(function () { if (!NATIVE) G.toast('캘린더 파일을 열어 일정에 추가하세요.'); }, function () { if (NATIVE) G.toast('캘린더 파일을 내보내지 못했습니다.'); });
   });
 
   $('pr-notify').addEventListener('click', function () {
     if (!canNotify) return;
-    if (G.store.get(NOTIFY) && Notification.permission === 'granted') {
-      G.store.set(NOTIFY, null); clearTimeout(notifyTimer); notifyLabel(); G.toast('앱 알림을 껐습니다.'); return;
+    if (G.store.get(NOTIFY) && perm() === 'granted') {
+      G.store.set(NOTIFY, null); scheduleNotify(); notifyLabel(); G.toast('앱 알림을 껐습니다.'); return;
     }
-    Notification.requestPermission().then(function (perm) {
-      if (perm === 'granted') { G.store.set(NOTIFY, true); scheduleNotify(); G.toast('끝날 시간에 알림을 보냅니다.'); }
+    (NATIVE ? NATIVE.notifyAsk() : Notification.requestPermission()).then(function (res) {
+      if (NATIVE) nativePerm = res;
+      if (res === 'granted') { G.store.set(NOTIFY, true); scheduleNotify(); G.toast('끝날 시간에 알림을 보냅니다.'); }
       else G.toast('알림이 허용되지 않았습니다. 캘린더에 추가해 주세요.');
       notifyLabel();
-    });
+    }, function () { G.toast('알림을 켜지 못했습니다. 캘린더에 추가해 주세요.'); });
   });
 
   setInterval(checkAlert, 30000);
@@ -215,6 +236,7 @@
     init: function () {
       if (saved) fillForm(saved); else { $('p-date').value = G.todayStr(); syncForm(); }
       render(); checkAlert(); scheduleNotify();
+      if (NATIVE) NATIVE.notifyState().then(function (s) { nativePerm = s; notifyLabel(); scheduleNotify(); }, function () {});
     }
   };
 })();

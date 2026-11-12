@@ -32,7 +32,7 @@
   route();
 
   /* 오프라인 사용·홈 화면 설치 (일반 웹 주소에서만) */
-  if ('serviceWorker' in navigator && !G.inArtifact && /^https?:$/.test(location.protocol)) {
+  if ('serviceWorker' in navigator && !G.inArtifact && !G.native && /^https?:$/.test(location.protocol)) {
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('sw.js').catch(function () {});
     });

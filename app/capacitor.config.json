@@ -1,0 +1,18 @@
+{
+  "appId": "io.github.pjy04022rgb.gwiga",
+  "appName": "귀가약속",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#16212B"
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css",
+      "style": "DARK"
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_gwiga",
+      "iconColor": "#E8A33D"
+    }
+  }
+}

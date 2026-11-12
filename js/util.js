@@ -46,8 +46,9 @@
   }
   G.artifactDownloads = artifactDownloads;
 
-  /* 파일 저장: 아티팩트면 플랫폼 저장 기능, 아니면 일반 다운로드 */
+  /* 파일 저장: 설치형 앱이면 공유 창, 아티팩트면 플랫폼 저장 기능, 아니면 일반 다운로드 */
   G.saveFile = function (filename, blob) {
+    if (G.native) return G.native.shareFile(filename, blob);
     return artifactDownloads().then(function (dl) {
       if (dl) return dl.save({ filename: filename, data: blob });
       var url = URL.createObjectURL(blob);
