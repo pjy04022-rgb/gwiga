@@ -6,6 +6,6 @@
  * 비워 두면 모임 모드는 이 기기 안에서만 동작하는 시연판으로 열린다.
  */
 window.GWIGA_CONFIG = {
-  supabaseUrl: '',
-  supabaseKey: ''
+  supabaseUrl: 'https://zhkxwnxxgxhedkbgrjun.supabase.co',
+  supabaseKey: 'sb_publishable_LMRydXz2IUSz1eZTfHhfMw_rOsBTQkW'
 };
