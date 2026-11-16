@@ -17,7 +17,8 @@
 index.html              화면 마크업 (다섯 화면: #plan #group #pledge #check #law, 모임은 #room-코드 #join-코드)
 css/style.css           디자인 토큰(:root)과 전체 스타일, 라이트/다크 테마
 js/util.js              공용 함수 (저장소, 날짜, 조사 처리, 토스트, 화면 간 이벤트)
-js/native.js           설치형 앱(안드로이드)에서만 쓰는 기능: 공유 창, 파일 내보내기, 예약 알림. 웹에서는 G.native가 null
+js/native.js            설치형 앱(안드로이드)에서만 쓰는 기능: 공유 창, 파일 내보내기, 예약 알림·알림 채널. 웹에서는 G.native가 null
+js/alarms.js            알림 공통(G.alarms): 앱은 휴대폰에 예약(앱을 꺼도 울림), 웹은 탭이 열려 있을 때만. 계획·모임이 함께 씀
 js/model.js             숙취 계산식(위드마크) — 순수 함수
 js/group-logic.js       모임 모드 규칙(상태 판정, 참가 검증, 마무리 조건) — 순수 함수
 js/config.js            모임 모드 서버 설정(Supabase 주소·공개 키). 비우면 시연판으로 열림
@@ -36,6 +37,7 @@ supabase/test.sql       서버 규칙 시험(로컬 Postgres에서 anon 역할�
 supabase/README.md      Supabase 설정 방법
 tools/check.mjs         계산식·모임 규칙 점검 스크립트 (node tools/check.mjs)
 app/                    안드로이드 앱(Capacitor). 웹 파일을 app/www로 복사해 APK를 만든다 — app/README.md
+.github/workflows/android.yml  main에 올리면 GitHub가 APK를 빌드해 릴리스에 gwiga.apk로 올림
 ```
 
 빌드 도구 없이 정적 파일만으로 동작한다. 스크립트는 ES 모듈이 아닌 일반 스크립트이고 `window.Gwiga` 하나에 기능을 묶는다.
@@ -49,12 +51,20 @@ app/                    안드로이드 앱(Capacitor). 웹 파일을 app/www로
 - 스키마를 바꾸면 Supabase SQL Editor에서 schema.sql을 다시 실행해야 한다(여러 번 실행해도 안전).
 - 시연판(`S.mode === 'local'`)에서만 예시 모임·화면 전환·끝날 시간 건너뛰기가 보인다.
 
+## 알림
+
+- 화면 코드는 알림을 직접 다루지 않고 `G.alarms.set(key, items)`만 부른다. key는 `plan` 또는 `room-코드`, 같은 key로 다시 부르면 이전 예약을 바꾼다.
+- 계획: 끝나기 15분 전·끝날 시간·(다음 날 운전 예정이면) 운전 30분 전. 모임: 차를 가져와 미확인이면 30분 전, 그리고 끝날 시간(총무에게는 미확인 확인 안내).
+- 권한은 사용자가 누른 순간(약속 저장, 모임 만들기·참가)에만 묻는다. 사용자가 끈 알림(`gwiga-notify-v1` = false)은 다시 묻지 않는다.
+- 안드로이드 앱은 `USE_EXACT_ALARM`·`SCHEDULE_EXACT_ALARM`으로 정확한 시각에, 중요도 높은 채널(`gwiga-alerts`)로 화면 위에 띄운다. Play 스토어에 올릴 때는 정확한 알람 권한 정책을 다시 확인한다.
+- 끝날 시간이 지난 뒤 앱을 다시 열면 한 번은 약속(또는 모임) 화면으로 데려온다.
+
 ## 작업 규칙
 
 - 로컬 확인: `python3 -m http.server 8000` 후 http://localhost:8000 (서비스 워커는 file://에서 동작하지 않음)
 - 계산식이나 모임 규칙을 바꾸면 `node tools/check.mjs`를 돌린다.
 - 서버 규칙을 바꾸면 로컬 Postgres에 schema.sql을 불러온 뒤 `psql -v ON_ERROR_STOP=1 -f supabase/test.sql`로 시험한다(anon·authenticated 역할을 먼저 만들 것).
-- 파일을 바꾸면 `sw.js`의 `CACHE` 값을 올려야 설치된 앱이 새 버전을 받는다.
+- 파일을 바꾸면 `sw.js`의 `CACHE` 값을 올려야 설치된 웹앱이 새 버전을 받는다. 안드로이드 앱은 main에 올리면 GitHub Actions가 새 APK를 만든다.
 - 색은 css의 토큰(`--ink`, `--accent` 등)으로만 쓰고, 라이트/다크 둘 다 확인한다.
 - 화면 문구를 추가하면 위 1번 원칙의 금지 표현이 없는지 검색한다: `grep -rn "운전 가능\|안전합\|괜찮습\|운전해도" index.html js/`
   (calc.js의 "운전해도 된다는 뜻이 아닙니다", "운전 가능 여부를 알려주지 않습니다"는 부정문이라 허용)

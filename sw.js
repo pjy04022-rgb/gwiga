@@ -1,8 +1,8 @@
 /* 오프라인 캐시. 앱 파일을 고치면 CACHE 버전을 올린다. */
-var CACHE = 'gwiga-v6';
+var CACHE = 'gwiga-v7';
 var SHELL = [
   './', 'index.html', 'css/style.css',
-  'js/util.js', 'js/native.js', 'js/model.js', 'js/group-logic.js', 'js/config.js', 'js/plan.js', 'js/pledge.js', 'js/calc.js',
+  'js/util.js', 'js/native.js', 'js/alarms.js', 'js/model.js', 'js/group-logic.js', 'js/config.js', 'js/plan.js', 'js/pledge.js', 'js/calc.js',
   'js/group-store.js', 'js/group.js', 'js/main.js',
   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'
 ];
@@ -35,11 +35,17 @@ self.addEventListener('fetch', function (e) {
   }));
 });
 
-/* 알림을 누르면 앱 열기 */
+/* 알림을 누르면 앱을 열고 그 화면(약속·모임·숙취 계산)으로 간다 */
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();
+  var hash = (e.notification.data && e.notification.data.hash) || 'plan';
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
-    for (var i = 0; i < list.length; i++) { if ('focus' in list[i]) return list[i].focus(); }
-    return self.clients.openWindow('./#plan');
+    for (var i = 0; i < list.length; i++) {
+      if ('focus' in list[i]) {
+        if ('navigate' in list[i]) list[i].navigate('./#' + hash).catch(function () {});
+        return list[i].focus();
+      }
+    }
+    return self.clients.openWindow('./#' + hash);
   }));
 });

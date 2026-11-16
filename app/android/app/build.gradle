@@ -7,8 +7,9 @@ android {
         applicationId "io.github.pjy04022rgb.gwiga"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // GitHub에서 빌드할 때마다 번호가 올라가 새 APK를 기존 앱 위에 업데이트로 설치할 수 있다
+        versionCode((System.getenv("GITHUB_RUN_NUMBER") ?: "0").toInteger() + 1)
+        versionName "1.0." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,7 +17,20 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // 시험용 고정 서명 키: 누가 어디서 빌드해도 같은 서명이라 업데이트 설치가 된다.
+    // 스토어 배포용 키가 아니다(비밀번호가 공개되어 있음). Play 스토어에 올릴 때는 새 키를 만든다.
+    signingConfigs {
+        gwiga {
+            storeFile file("gwiga-debug.keystore")
+            storePassword "gwiga-debug"
+            keyAlias "gwiga"
+            keyPassword "gwiga-debug"
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.gwiga
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

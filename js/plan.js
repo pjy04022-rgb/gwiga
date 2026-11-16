@@ -1,10 +1,9 @@
 /* 술자리 계획 · 종료 알림 · 캘린더 */
 (function () {
   var G = window.Gwiga, $ = G.$;
-  var KEY = 'gwiga-plan-v1', DISMISS = 'gwiga-dismiss-v1', NOTIFY = 'gwiga-notify-v1';
+  var KEY = 'gwiga-plan-v1', DISMISS = 'gwiga-dismiss-v1', JUMPED = 'gwiga-jumped-v1';
   var saved = G.store.get(KEY);
   var editing = false;
-  var notifyTimer = null;
 
   /* ---------- 데이터 ---------- */
   function readForm() {
@@ -87,52 +86,74 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  /* ---------- 앱 알림 ----------
-   * 웹: 앱이 켜져 있을 때만 울린다.
-   * 설치형 앱(G.native): 휴대폰에 예약해 두어 앱을 꺼 두어도 울린다. 다음 날 운전 예정이면 운전 30분 전에도 알린다.
+  /* ---------- 알림 (js/alarms.js) ----------
+   * 앱: 휴대폰에 예약해 두어 앱을 꺼 두어도 정확한 시각에 화면 위로 뜬다.
+   * 웹: 이 탭이 열려 있는 동안만 울린다. 그래서 캘린더 추가와 안드로이드 앱을 함께 안내한다.
+   * 끝날 시간 15분 전·끝날 시간·(다음 날 운전 예정이면) 운전 30분 전, 세 번 알린다.
    */
-  var NATIVE = G.native;
-  var canNotify = !!NATIVE || ('Notification' in window && !G.inArtifact);
-  var nativePerm = 'prompt';
-  function perm() { return NATIVE ? nativePerm : Notification.permission; }
-  function notifyLabel() {
-    if (!canNotify) return;
-    var on = G.store.get(NOTIFY) && perm() === 'granted';
-    $('pr-notify').classList.toggle('done', !!on);
-    $('pr-notify').querySelector('b').textContent = on ? '앱 알림 켜짐' : '앱 알림 켜기';
-    $('pr-notify-sub').textContent = perm() === 'denied'
-      ? (NATIVE ? '휴대폰 설정에서 알림이 막혀 있습니다' : '브라우저 설정에서 알림이 막혀 있습니다')
-      : NATIVE ? (on ? '앱을 꺼 두어도 끝날 시간에 알립니다' : '앱을 꺼 두어도 끝날 시간에 알려 줍니다')
-      : (on ? '앱이 켜져 있으면 끝날 시간에 알립니다' : '앱이 켜져 있을 때 끝날 시간에 알립니다');
-  }
-  var NOTIFY_TITLE = '술자리 끝날 시간입니다';
+  var A = G.alarms, NATIVE = G.native;
+  var IS_ANDROID_WEB = !NATIVE && !G.inArtifact && /Android/i.test(navigator.userAgent);
+
   function notifyBody(p) {
     return '오늘은 ' + (p.method === '근처 숙소' ? '근처에서 자고 가기로 했습니다.' : phrase(p.method) + ' 귀가하기로 했습니다.') + ' 맑은 정신일 때 정한 약속입니다.';
   }
-  function nativeAlarms(p) {
-    var list = [{ kind: 'end', title: NOTIFY_TITLE, body: notifyBody(p), at: endDate(p) }];
-    if (p.drv === 'y') list.push({ kind: 'drive', title: '운전 전 숙취 확인',
-      body: '어젯밤 술자리 뒤 ' + p.drive + '에 운전할 예정입니다. 알코올이 남아 있을 수 있으니 숙취 계산기로 확인하고, 조금이라도 의심되면 운전하지 마세요.',
-      at: new Date(driveDate(p).getTime() - 30 * 60000) });
+  function planAlarms(p) {
+    var end = endDate(p);
+    var list = [
+      { title: '15분 뒤 술자리가 끝납니다', at: new Date(end.getTime() - 15 * 60000), hash: 'plan',
+        body: notifyBody(p) + (p.car === 'y' && p.method !== '대리운전' ? ' 차 키는 친구에게 맡겨 두세요.' : p.method === '대리운전' ? ' 지금 대리운전을 불러 두세요.' : '') },
+      { title: '술자리 끝날 시간입니다', body: notifyBody(p) + ' 지금 기분이 괜찮아도 운전대는 잡지 마세요.', at: end, hash: 'plan' }
+    ];
+    if (p.drv === 'y') list.push({ title: '운전 전 숙취 확인', hash: 'check', at: new Date(driveDate(p).getTime() - 30 * 60000),
+      body: '어젯밤 술자리 뒤 ' + p.drive + '에 운전할 예정입니다. 알코올이 남아 있을 수 있으니 숙취 계산기로 확인하고, 조금이라도 의심되면 운전하지 마세요.' });
     return list;
   }
-  function fireNotification(p) {
-    var title = NOTIFY_TITLE;
-    var body = notifyBody(p);
-    var opts = { body: body, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag: 'gwiga-end' };
-    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.ready.then(function (reg) { reg.showNotification(title, opts); });
+  /* 계획 알림은 15분 전·끝날 시간·운전 전, 최대 3개 */
+  function scheduleNotify() { A.set('plan', saved ? planAlarms(saved) : []); }
+
+  function hhmm(d) { return G.pad(d.getHours()) + ':' + G.pad(d.getMinutes()); }
+  function alarmLabel() {
+    var box = $('pr-alarm');
+    box.hidden = !saved;
+    if (!saved) return;
+    var on = A.enabled(), st = A.state(), end = endDate(saved), past = end.getTime() <= Date.now();
+    var title, sub, cls;
+    if (!A.supported) {
+      title = '이 브라우저는 알림을 보낼 수 없습니다';
+      sub = '아래 캘린더에 추가하면 캘린더 앱이 끝날 시간에 알려 줍니다.'; cls = 'warn';
+    } else if (st === 'denied') {
+      title = '알림이 막혀 있습니다';
+      sub = NATIVE ? '휴대폰 설정 → 애플리케이션 → 귀가약속 → 알림에서 허용해 주세요.' : '브라우저 주소창 옆 설정에서 이 사이트의 알림을 허용해 주세요. 그동안은 캘린더에 추가해 두세요.'; cls = 'warn';
+    } else if (!on) {
+      title = A.userOff() ? '알림을 꺼 두었습니다' : '알림이 아직 꺼져 있습니다';
+      sub = '켜 두면 끝나기 15분 전과 끝날 시간 ' + hhmm(end) + '에 약속을 다시 알려 줍니다.'; cls = 'off';
+    } else if (NATIVE && A.exact() !== 'granted') {
+      title = '알림이 몇 분 늦게 울릴 수 있습니다';
+      sub = '"정확한 시간 알림 허용"을 누르고 귀가약속을 켜 주세요.'; cls = 'warn';
+    } else if (past) {
+      title = '끝날 시간이 지났습니다'; sub = '다음 술자리 전에 약속을 새로 저장하면 다시 알려 줍니다.'; cls = 'on';
+    } else if (NATIVE) {
+      title = hhmm(end) + '에 알림이 울립니다';
+      sub = '앱을 꺼 두어도 끝나기 15분 전과 끝날 시간에 화면 위로 알려 줍니다.' + (saved.drv === 'y' ? ' 내일 운전 30분 전에도 알립니다.' : ''); cls = 'on';
     } else {
-      try { new Notification(title, opts); } catch (e) {}
+      title = hhmm(end) + '에 알림이 울립니다 (이 탭이 열려 있을 때만)';
+      sub = '탭을 닫아도 받으려면 캘린더에 추가' + (IS_ANDROID_WEB ? '하거나 안드로이드 앱을 받으세요.' : '하세요.'); cls = 'warn';
     }
+    box.className = 'alarm-status ' + cls;
+    $('pr-alarm-title').textContent = title;
+    $('pr-alarm-sub').textContent = sub;
+    $('pr-alarm-on').hidden = !A.supported || on || st === 'denied';
+    $('pr-alarm-exact').hidden = !(NATIVE && on && A.exact() !== 'granted');
+    $('pr-alarm-off').hidden = !on;
   }
-  function scheduleNotify() {
-    clearTimeout(notifyTimer);
-    var on = canNotify && saved && G.store.get(NOTIFY) && perm() === 'granted';
-    if (NATIVE) { NATIVE.setAlarms(on ? nativeAlarms(saved) : []).catch(function () {}); return; }
-    if (!on) return;
-    var ms = endDate(saved).getTime() - Date.now();
-    if (ms > 0 && ms < 24 * 3600000) notifyTimer = setTimeout(function () { fireNotification(saved); checkAlert(); }, ms);
+
+  /* 약속을 저장하는 순간(사용자가 누른 순간) 알림 권한을 묻는다. 직접 끈 사람에게는 다시 묻지 않는다. */
+  function autoAsk() {
+    if (!A.supported || A.userOff() || A.state() === 'denied') return Promise.resolve();
+    if (A.state() === 'granted') return A.turnOn();
+    return A.ask().then(function (res) {
+      if (res === 'granted') G.toast('끝날 시간에 알림을 보냅니다.');
+    });
   }
 
   /* ---------- 종료 알림 화면 ---------- */
@@ -143,10 +164,23 @@
     $('al-check').hidden = p.drv !== 'y';
     $('alert').hidden = false;
   }
-  function checkAlert() {
-    if (!saved) { $('alert').hidden = true; return; }
+  function alertDue() {
+    if (!saved) return false;
     var e = endDate(saved), now = Date.now();
-    if (now >= e.getTime() && now < e.getTime() + 6 * 3600000 && G.store.get(DISMISS) !== e.toISOString()) showAlert(saved);
+    return now >= e.getTime() && now < e.getTime() + 6 * 3600000 && G.store.get(DISMISS) !== e.toISOString();
+  }
+  function checkAlert() {
+    if (alertDue()) showAlert(saved); else if (!saved) $('alert').hidden = true;
+  }
+  /* 끝날 시간이 지난 뒤 앱을 다시 열면, 다른 화면을 보고 있었더라도 한 번은 약속 화면으로 데려온다 */
+  function jumpIfDue() {
+    if (!alertDue()) return false;
+    var key = endDate(saved).toISOString();
+    if (G.store.get(JUMPED) === key) return false;
+    G.store.set(JUMPED, key);
+    if (location.hash !== '#plan' && location.hash !== '') location.hash = 'plan';
+    showAlert(saved); window.scrollTo(0, 0);
+    return true;
   }
 
   /* ---------- 화면 ---------- */
@@ -171,8 +205,8 @@
     $('pr-drive').textContent = '다음 날 ' + p.drive + ' 운전 예정 · 알코올이 남아 있을 수 있으니 운전 전에 숙취 계산기로 확인하세요.';
     $('pr-gcal').href = gcalUrl(p);
     $('pr-ics').hidden = G.inArtifact;
-    $('pr-notify').hidden = !canNotify;
-    notifyLabel();
+    $('pr-apk').hidden = !IS_ANDROID_WEB;
+    alarmLabel();
   }
 
   /* ---------- 이벤트 ---------- */
@@ -181,9 +215,10 @@
   $('plan-form').addEventListener('submit', function (e) {
     e.preventDefault();
     saved = readForm();
-    G.store.set(KEY, saved); G.store.set(DISMISS, null);
+    G.store.set(KEY, saved); G.store.set(DISMISS, null); G.store.set(JUMPED, null);
     editing = false; render(); checkAlert(); scheduleNotify();
     G.toast('약속을 저장했습니다.');
+    autoAsk();
     window.scrollTo(0, 0);
     G.emit('plan');
   });
@@ -212,31 +247,31 @@
     G.saveFile('귀가약속.ics', blob).then(function () { if (!NATIVE) G.toast('캘린더 파일을 열어 일정에 추가하세요.'); }, function () { if (NATIVE) G.toast('캘린더 파일을 내보내지 못했습니다.'); });
   });
 
-  $('pr-notify').addEventListener('click', function () {
-    if (!canNotify) return;
-    if (G.store.get(NOTIFY) && perm() === 'granted') {
-      G.store.set(NOTIFY, null); scheduleNotify(); notifyLabel(); G.toast('앱 알림을 껐습니다.'); return;
-    }
-    (NATIVE ? NATIVE.notifyAsk() : Notification.requestPermission()).then(function (res) {
-      if (NATIVE) nativePerm = res;
-      if (res === 'granted') { G.store.set(NOTIFY, true); scheduleNotify(); G.toast('끝날 시간에 알림을 보냅니다.'); }
+  $('pr-alarm-on').addEventListener('click', function () {
+    A.turnOn().then(function (res) {
+      if (res === 'granted') G.toast('끝날 시간에 알림을 보냅니다.');
       else G.toast('알림이 허용되지 않았습니다. 캘린더에 추가해 주세요.');
-      notifyLabel();
-    }, function () { G.toast('알림을 켜지 못했습니다. 캘린더에 추가해 주세요.'); });
+    });
   });
+  $('pr-alarm-off').addEventListener('click', function () { A.turnOff(); G.toast('알림을 껐습니다.'); });
+  $('pr-alarm-exact').addEventListener('click', function () { A.openExactSettings(); });
 
-  setInterval(checkAlert, 30000);
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) checkAlert(); });
+  /* 알림을 켜고 끄거나 권한이 바뀌면 모든 예약을 다시 건다 */
+  A.onChange(function () { scheduleNotify(); alarmLabel(); });
+
+  setInterval(function () { checkAlert(); alarmLabel(); }, 30000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { if (!jumpIfDue()) checkAlert(); } });
 
   /* ---------- 다른 화면에서 쓰는 값 ---------- */
   G.plan = {
     get: function () { return saved; },
     current: function () { return saved || readForm(); },
     phrase: phrase,
+    due: alertDue,
     init: function () {
       if (saved) fillForm(saved); else { $('p-date').value = G.todayStr(); syncForm(); }
-      render(); checkAlert(); scheduleNotify();
-      if (NATIVE) NATIVE.notifyState().then(function (s) { nativePerm = s; notifyLabel(); scheduleNotify(); }, function () {});
+      render(); scheduleNotify();
+      if (!jumpIfDue()) checkAlert();
     }
   };
 })();

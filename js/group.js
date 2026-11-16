@@ -1,7 +1,8 @@
 /* 모임 모드 화면 — 규칙은 group-logic.js, 저장은 group-store.js */
 (function () {
-  var G = window.Gwiga, $ = G.$, L = window.GwigaGroup, S = G.groupStore;
+  var G = window.Gwiga, $ = G.$, L = window.GwigaGroup, S = G.groupStore, A = G.alarms;
   var LOCAL = S.mode === 'local';
+  var IS_ANDROID_WEB = !G.native && !G.inArtifact && /Android/i.test(navigator.userAgent);
 
   var active = false;
   var cur = null;          // 보고 있는 모임 코드 (null이면 목록)
@@ -57,6 +58,78 @@
     return { me: r.me, host: r.host };
   }
 
+  /* ---------- 모임 알림 ----------
+   * 내가 참가했거나 총무인 모임마다: 끝날 시간 알림, 차를 가져와 아직 미확인이면 30분 전 알림.
+   * 같은 내용이면 다시 걸지 않는다(화면은 5초마다 새로 그려지므로).
+   */
+  var ROOM_SIG = {}, ENDS = 'gwiga-room-ends-v1';
+  function roomAlarms(r) {
+    var me = r.members.filter(function (m) { return m.id === r.me; })[0] || null;
+    if (r.closed || r.example || (!me && !r.host)) return [];
+    var end = new Date(L.endAt(r)), hash = 'room-' + r.code, name = '「' + r.title + '」', items = [];
+    var st = me ? L.status(me) : null, open = me && me.car === 'y' && L.isUnresolved(st);
+    if (open) items.push({ title: '30분 뒤 ' + name + ' 모임이 끝납니다', at: new Date(end.getTime() - 30 * 60000), hash: hash,
+      body: me.method === '대리운전' ? '대리운전을 미리 불러 두세요. 끝난 뒤 대리 기사를 만나면 "대리 기사 만났어요"를 눌러야 확인됩니다.'
+        : '차 키를 아직 맡기지 않았습니다. 함께 있는 친구에게 키를 맡기고 "받았어요" 확인을 받으세요.' });
+    var body = '';
+    if (me) body = open ? '차가 아직 확인되지 않았습니다. 운전대는 잡지 말고 친구에게 키를 맡기거나 대리운전을 확인받으세요.'
+      : me.car === 'y' ? '차 키 확인이 끝났습니다. 약속대로 귀가하고 "집에 도착했어요"를 눌러 주세요.'
+      : '약속대로 ' + methodLabel(me.method) + (me.method === '걸어서' || me.method === '근처 숙소' ? '' : G.ro(methodLabel(me.method))) + ' 귀가하고 "집에 도착했어요"를 눌러 주세요.';
+    if (r.host) body += (body ? ' ' : '') + '총무님은 미확인 차가 남아 있지 않은지 확인하고 모임을 마무리해 주세요.';
+    items.push({ title: name + ' 끝날 시간입니다', body: body, at: end, hash: hash });
+    return items;
+  }
+  function scheduleRoom(r) {
+    var key = 'room-' + r.code, items = roomAlarms(r);
+    var sig = A.enabled() + '|' + JSON.stringify(items.map(function (i) { return [i.title, i.body, i.at.getTime()]; }));
+    if (ROOM_SIG[key] === sig) return;
+    ROOM_SIG[key] = sig;
+    A.set(key, items);
+    var ends = G.store.get(ENDS) || {};
+    if (items.length) ends[r.code] = Object.assign(ends[r.code] || {}, { end: L.endAt(r) }); else delete ends[r.code];
+    G.store.set(ENDS, ends);
+  }
+  A.onChange(function () { ROOM_SIG = {}; if (active) render(); });
+
+  /* 끝난 모임이 있으면, 앱을 다시 열었을 때 한 번은 그 모임 화면으로 데려온다(계획 알림이 먼저) */
+  function jumpIfDue() {
+    if (G.plan && G.plan.due && G.plan.due()) return;
+    var ends = G.store.get(ENDS) || {}, now = Date.now(), changed = false;
+    Object.keys(ends).forEach(function (code) {
+      var e = ends[code];
+      if (now > e.end + 24 * 3600000) { delete ends[code]; changed = true; return; }
+      if (!e.jumped && now >= e.end && now < e.end + 3 * 3600000 && !changed) {
+        e.jumped = true; changed = true;
+        if (location.hash !== '#room-' + code) location.hash = 'room-' + code;
+      }
+    });
+    if (changed) G.store.set(ENDS, ends);
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) jumpIfDue(); });
+
+  /* 모임을 만들거나 참가하는 순간(사용자가 누른 순간) 알림 권한을 묻는다 */
+  function autoAsk() {
+    if (!A.supported || A.userOff() || A.state() === 'denied') return;
+    if (A.state() === 'granted') A.turnOn(); else A.ask();
+  }
+
+  function alarmCard(r, me) {
+    if (!A.supported || r.closed || r.example || (!me && !r.host)) return null;
+    if (A.enabled() && A.persistent) return null;
+    var denied = A.state() === 'denied';
+    var kids = [h('p', { class: 'alarm-text' }, [
+      h('b', { text: A.enabled() ? '이 탭이 열려 있을 때만 알림이 울립니다' : denied ? '알림이 막혀 있습니다' : '끝날 시간에 알림 받기' }),
+      h('span', { text: A.enabled() ? '탭을 닫아도 받으려면 안드로이드 앱을 쓰세요.'
+        : denied ? (G.native ? '휴대폰 설정 → 애플리케이션 → 귀가약속 → 알림에서 허용해 주세요.' : '브라우저 설정에서 이 사이트의 알림을 허용해 주세요.')
+        : (me && me.car === 'y' ? '끝나기 30분 전과 끝날 시간에 키 확인을 알려 줍니다.' : '끝날 시간에 귀가 약속을 다시 알려 줍니다.') })
+    ])];
+    var btns = [];
+    if (!A.enabled() && !denied) btns.push(h('button', { class: 'btn small', type: 'button', text: '알림 켜기', onclick: function () { A.turnOn(); } }));
+    if (IS_ANDROID_WEB) btns.push(h('a', { class: 'btn ghost small', href: G.apkUrl, text: '안드로이드 앱 받기' }));
+    if (btns.length) kids.push(h('div', { class: 'btns' }, btns));
+    return h('div', { class: 'alarm-status ' + (A.enabled() ? 'warn' : denied ? 'warn' : 'off') }, kids);
+  }
+
   /* ---------- 그리기 ---------- */
   function typing() {
     var a = document.activeElement, root = $('group-root');
@@ -70,7 +143,7 @@
     if (!root.firstChild) root.replaceChildren(loadingView());
     if (!cur) {
       S.watch(null);
-      S.listRooms().then(function (rooms) { if (seq === renderSeq) root.replaceChildren(listView(rooms)); },
+      S.listRooms().then(function (rooms) { rooms.forEach(scheduleRoom); if (seq === renderSeq) root.replaceChildren(listView(rooms)); },
         function (e) { if (seq === renderSeq) root.replaceChildren(listView([], errMsg(e))); });
       return;
     }
@@ -78,6 +151,7 @@
     S.getRoom(cur).then(function (r) {
       if (seq !== renderSeq) return;
       if (!r) { root.replaceChildren(missingView()); return; }
+      scheduleRoom(r);
       if (joinMode || (!r.host && !r.me)) { if (!$('j-nick') || $('j-nick').dataset.code !== r.code) root.replaceChildren(joinView(r)); }
       else root.replaceChildren(boardView(r));
     }, function (e) { if (seq === renderSeq) root.replaceChildren(errorView(errMsg(e))); });
@@ -107,6 +181,7 @@
       var d = { title: title.value, date: date.value || G.todayStr(), start: start.value || '19:00', end: end.value || '23:00' };
       if (L.endAt(d) < Date.now() - 12 * 3600000) { err.textContent = '이미 지난 날짜입니다. 날짜와 시간을 다시 확인해 주세요.'; return; }
       createBtn.disabled = true;
+      autoAsk();
       S.createRoom(d).then(function (r) {
         if (LOCAL) viewAs[r.code] = 'host';
         title.blur();
@@ -250,6 +325,7 @@
       var d = val(), errs = L.validateJoin(d, r.members);
       if (errs.length) { err.textContent = errs.join(' '); return; }
       submit.disabled = true;
+      autoAsk();
       S.join(r.code, d).then(function (m) {
         joinMode = false;
         if (LOCAL) viewAs[r.code] = m.id;
@@ -311,6 +387,7 @@
     });
 
     if (me) parts.push(myCard(r, me, ms, byId, ended));
+    if (!LOCAL || !r.example) parts.push(alarmCard(r, me));
     if (who.host) parts.push(hostCard(r, ms, ended, !!me));
     if (!me && !who.host) parts.push(h('div', { class: 'btns' }, [h('a', { class: 'btn', href: '#join-' + r.code, text: '이 모임에 참가하기' })]));
 
@@ -453,6 +530,7 @@
   setInterval(function () { if (active && cur && !document.hidden) render(); }, 60000);   // 끝날 시간이 지나면 화면이 바뀌도록
 
   G.group = {
+    jumpIfDue: jumpIfDue,
     show: function (on, target) {
       active = on;
       if (!on) { S.watch(null); return; }

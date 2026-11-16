@@ -30,6 +30,7 @@
   G.plan.init();
   G.calc.init();
   route();
+  G.group.jumpIfDue();   /* 끝난 모임이 있으면 그 화면으로 (계획 알림이 먼저) */
 
   /* 오프라인 사용·홈 화면 설치 (일반 웹 주소에서만) */
   if ('serviceWorker' in navigator && !G.inArtifact && !G.native && /^https?:$/.test(location.protocol)) {

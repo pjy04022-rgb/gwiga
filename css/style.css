@@ -288,6 +288,16 @@ tbody tr:last-child td{border-bottom:0}
 .m-name small{flex-basis:100%;font-size:13px}
 .m-name .tag{margin-left:0}
 
+/* ---------- 알림 상태 ---------- */
+.alarm-status{display:flex;flex-direction:column;gap:10px;border-radius:12px;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-left-width:6px}
+.alarm-status.on{border-left-color:var(--good)}
+.alarm-status.off{border-left-color:var(--muted)}
+.alarm-status.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.alarm-text{display:flex;flex-direction:column;gap:2px}
+.alarm-text b{font-size:16px}
+.alarm-text span{font-size:14px;color:var(--muted)}
+.alarm-status.warn .alarm-text span{color:var(--ink)}
+
 /* ---------- 토스트 ---------- */
 .toast{position:fixed;z-index:30;left:50%;transform:translateX(-50%);top:calc(76px + env(safe-area-inset-top,0px));max-width:calc(100% - 32px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 

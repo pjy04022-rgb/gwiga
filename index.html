@@ -73,15 +73,23 @@
 
       <div class="actions">
         <h2 class="sub">끝날 시간에 다시 알려받기</h2>
+        <div class="alarm-status" id="pr-alarm" hidden>
+          <p class="alarm-text"><b id="pr-alarm-title">알림이 꺼져 있습니다</b><span id="pr-alarm-sub"></span></p>
+          <div class="btns">
+            <button class="btn small" type="button" id="pr-alarm-on">알림 켜기</button>
+            <button class="btn small" type="button" id="pr-alarm-exact" hidden>정확한 시간 알림 허용</button>
+            <button class="btn ghost small" type="button" id="pr-alarm-off" hidden>알림 끄기</button>
+          </div>
+        </div>
         <div class="action-grid">
+          <a class="action" id="pr-apk" href="https://github.com/pjy04022-rgb/gwiga/releases/latest/download/gwiga.apk" hidden>
+            <b>안드로이드 앱 받기</b><span>앱을 꺼 두어도 끝날 시간에 알림이 뜹니다</span>
+          </a>
           <a class="action" id="pr-gcal" href="#" target="_blank" rel="noopener">
-            <b>구글 캘린더에 추가</b><span>앱을 닫아도 알림이 옵니다</span>
+            <b>구글 캘린더에 추가</b><span>캘린더 앱이 끝날 시간에 알려 줍니다</span>
           </a>
           <button class="action" type="button" id="pr-ics" hidden>
             <b>휴대폰 캘린더에 추가</b><span>아이폰·갤럭시 기본 캘린더 (.ics)</span>
-          </button>
-          <button class="action" type="button" id="pr-notify" hidden>
-            <b>앱 알림 켜기</b><span id="pr-notify-sub">앱이 켜져 있을 때 끝날 시간에 알립니다</span>
           </button>
           <a class="action" href="#pledge">
             <b>서약 카드 보내기</b><span>함께 마실 친구에게 약속 알리기</span>
@@ -313,6 +321,7 @@
 
 <script src="js/util.js"></script>
 <script src="js/native.js"></script>
+<script src="js/alarms.js"></script>
 <script src="js/model.js"></script>
 <script src="js/group-logic.js"></script>
 <script src="js/config.js"></script>
