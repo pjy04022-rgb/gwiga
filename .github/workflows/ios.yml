@@ -1,0 +1,72 @@
+# 아이폰 앱 빌드 (GitHub의 Mac 서버에서 실행)
+# main에 화면(웹 파일)이나 app/ 폴더가 바뀌어 올라오면 자동 실행. Actions 탭 → "아이폰 앱 빌드" → Run workflow로도 실행.
+# 결과물
+#   릴리스 "ios"의 gwiga.ipa  서명 안 된 설치 파일. 항상 최신 주소:
+#       https://github.com/pjy04022-rgb/gwiga/releases/download/ios/gwiga.ipa
+#       아이폰은 서명 없는 앱을 설치할 수 없어, 컴퓨터에서 Sideloadly 등으로 본인 Apple ID 서명 후 설치한다(app/README.md).
+#   Artifacts의 gwiga-ios-simulator.zip  Mac의 iOS 시뮬레이터용
+name: 아이폰 앱 빌드
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['app/**', 'index.html', 'css/**', 'js/**', 'icons/**', '.github/workflows/ios.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios-ipa
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: 웹 파일 넣기
+        run: |
+          npm ci
+          node build-www.mjs
+          npx cap sync ios
+      - name: 시뮬레이터용 빌드
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO build
+          (cd build/sim/Build/Products/Debug-iphonesimulator && zip -qry "$GITHUB_WORKSPACE/gwiga-ios-simulator.zip" App.app)
+      - name: 아이폰용 빌드 (서명 없음)
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath build/dev CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+          mkdir -p ipa/Payload && cp -R build/dev/Build/Products/Release-iphoneos/App.app ipa/Payload/
+          (cd ipa && zip -qry "$GITHUB_WORKSPACE/gwiga.ipa" Payload)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gwiga-ios-unsigned
+          path: gwiga.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gwiga-ios-simulator
+          path: gwiga-ios-simulator.zip
+      - name: 릴리스 "ios"에 올리기 (안드로이드 최신 릴리스는 그대로 둠)
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="아이폰용 서명 없는 설치 파일입니다. 아이폰은 이 파일을 바로 설치할 수 없어, 컴퓨터에서 Sideloadly 같은 도구로 본인 Apple ID로 서명해 설치합니다(무료 Apple ID는 7일마다 다시 설치). 컴퓨터가 없으면 Safari에서 https://pjy04022-rgb.github.io/gwiga/ 를 열고 공유 → 홈 화면에 추가를 쓰세요. (빌드 ${{ github.run_number }}, ${{ github.sha }})"
+          if gh release view ios > /dev/null 2>&1; then
+            gh release upload ios gwiga.ipa --clobber
+            gh release edit ios --notes "$NOTES" --latest=false
+          else
+            gh release create ios gwiga.ipa --title "귀가약속 아이폰 설치 파일 (.ipa)" --notes "$NOTES" --latest=false --target "${{ github.sha }}"
+          fi

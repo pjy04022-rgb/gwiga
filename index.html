@@ -36,6 +36,14 @@
 </header>
 
 <main class="wrap">
+  <aside class="install" id="install" hidden aria-labelledby="ins-title">
+    <div class="install-head">
+      <p class="alarm-text"><b id="ins-title">앱으로 받기</b><span id="ins-sub"></span></p>
+      <button class="install-x" type="button" id="ins-close" aria-label="안내 닫기">×</button>
+    </div>
+    <ol class="install-steps" id="ins-steps"></ol>
+    <div class="btns" id="ins-btns"></div>
+  </aside>
 
   <!-- ============ 술자리 계획 ============ -->
   <section class="view" data-view="plan" aria-labelledby="plan-title">
@@ -321,6 +329,7 @@
 
 <script src="js/util.js"></script>
 <script src="js/native.js"></script>
+<script src="js/install.js"></script>
 <script src="js/alarms.js"></script>
 <script src="js/model.js"></script>
 <script src="js/group-logic.js"></script>

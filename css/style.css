@@ -298,6 +298,18 @@ tbody tr:last-child td{border-bottom:0}
 .alarm-text span{font-size:14px;color:var(--muted)}
 .alarm-status.warn .alarm-text span{color:var(--ink)}
 
+/* ---------- 앱 받기 안내 ---------- */
+.install{display:flex;flex-direction:column;gap:12px;margin-bottom:24px;background:var(--panel);color:var(--panel-ink);border-radius:14px;padding:16px 18px;border-left:6px solid var(--amber)}
+.install-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.install .alarm-text span{color:var(--panel-muted)}
+.install-x{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--panel-line);background:transparent;color:var(--panel-ink);font-size:20px;line-height:1;cursor:pointer}
+.install-steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:4px;font-size:15px}
+.install-steps b{color:var(--amber)}
+.ins-more{font-size:14px;color:var(--panel-muted)}
+.ins-more summary{cursor:pointer;color:var(--panel-ink);font-weight:600}
+.ins-more p{margin:8px 0}
+.install .btn.ghost{color:var(--panel-ink);border-color:var(--panel-muted)}
+
 /* ---------- 토스트 ---------- */
 .toast{position:fixed;z-index:30;left:50%;transform:translateX(-50%);top:calc(76px + env(safe-area-inset-top,0px));max-width:calc(100% - 32px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 

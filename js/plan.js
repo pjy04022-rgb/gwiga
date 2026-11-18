@@ -120,7 +120,8 @@
     var title, sub, cls;
     if (!A.supported) {
       title = '이 브라우저는 알림을 보낼 수 없습니다';
-      sub = '아래 캘린더에 추가하면 캘린더 앱이 끝날 시간에 알려 줍니다.'; cls = 'warn';
+      sub = (G.device && G.device.ios && !G.device.standalone ? '아이폰은 Safari 공유 → 홈 화면에 추가한 뒤 그 아이콘으로 열면 알림을 켤 수 있습니다. 지금은 ' : '')
+        + '아래 캘린더에 추가하면 캘린더 앱이 끝날 시간에 알려 줍니다.'; cls = 'warn';
     } else if (st === 'denied') {
       title = '알림이 막혀 있습니다';
       sub = NATIVE ? '휴대폰 설정 → 애플리케이션 → 귀가약속 → 알림에서 허용해 주세요.' : '브라우저 주소창 옆 설정에서 이 사이트의 알림을 허용해 주세요. 그동안은 캘린더에 추가해 두세요.'; cls = 'warn';

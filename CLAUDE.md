@@ -36,8 +36,9 @@ supabase/schema.sql     서버: 테이블, 직접 접근 차단, 강제 규칙�
 supabase/test.sql       서버 규칙 시험(로컬 Postgres에서 anon 역할로 실행)
 supabase/README.md      Supabase 설정 방법
 tools/check.mjs         계산식·모임 규칙 점검 스크립트 (node tools/check.mjs)
-app/                    안드로이드 앱(Capacitor). 웹 파일을 app/www로 복사해 APK를 만든다 — app/README.md
+app/                    안드로이드·아이폰 앱(Capacitor). 웹 파일을 app/www로 복사해 앱을 만든다 — app/README.md
 .github/workflows/android.yml  main에 올리면 GitHub가 APK를 빌드해 릴리스에 gwiga.apk로 올림
+.github/workflows/ios.yml      main에 올리면 GitHub의 Mac 서버가 아이폰용 서명 없는 .ipa를 빌드해 릴리스 ios에 gwiga.ipa로 올림
 ```
 
 빌드 도구 없이 정적 파일만으로 동작한다. 스크립트는 ES 모듈이 아닌 일반 스크립트이고 `window.Gwiga` 하나에 기능을 묶는다.
