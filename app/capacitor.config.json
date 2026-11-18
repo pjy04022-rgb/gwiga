@@ -14,5 +14,9 @@
       "smallIcon": "ic_stat_gwiga",
       "iconColor": "#E8A33D"
     }
+  },
+  "ios": {
+    "backgroundColor": "#16212B",
+    "contentInset": "never"
   }
 }

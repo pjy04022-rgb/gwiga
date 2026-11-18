@@ -27,3 +27,19 @@ for name, k in sizes.items():
     icon.putalpha(a)
     icon.save(d / "ic_stat_gwiga.png")
 print("아이콘 준비 완료")
+
+# ---------- 아이폰 ----------
+ios = here / "ios/App/App/Assets.xcassets"
+if ios.exists():
+    # 앱 아이콘: 1024px 한 장, 투명 부분 없이 (모서리는 iOS가 둥글게 깎는다)
+    bg = Image.new("RGB", (1024, 1024), (22, 33, 43))
+    big = mask.resize((1024, 1024), Image.LANCZOS)
+    bg.paste(big, (0, 0), big)
+    bg.save(ios / "AppIcon.appiconset/AppIcon-512@2x.png")
+    # 시작 화면: 남색 바탕 가운데 아이콘
+    splash = Image.new("RGB", (2732, 2732), (22, 33, 43))
+    mid = plain.resize((600, 600), Image.LANCZOS)
+    splash.paste(mid, ((2732 - 600) // 2, (2732 - 600) // 2), mid)
+    for f in (ios / "Splash.imageset").glob("*.png"):
+        splash.save(f)
+    print("아이폰 아이콘 준비 완료")

@@ -1,0 +1,49 @@
+# 아이폰 앱 빌드 (GitHub의 Mac 서버에서 실행)
+# 저장소 Actions 탭 → "아이폰 앱 빌드" → Run workflow, 또는 app/·js/·css/ 등을 고쳐 올리면 자동 실행.
+# 결과물(Artifacts):
+#   gwiga-ios-unsigned.ipa      서명 안 된 설치 파일. Sideloadly 등으로 본인 Apple ID 서명 후 아이폰에 설치
+#   gwiga-ios-simulator.zip     Mac의 iOS 시뮬레이터용
+name: 아이폰 앱 빌드
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ['app/**', 'index.html', 'css/**', 'js/**', 'icons/**', '.github/workflows/ios.yml']
+
+jobs:
+  build:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 웹 파일 넣기
+        run: |
+          npm ci
+          node build-www.mjs
+          npx cap sync ios
+      - name: 시뮬레이터용 빌드
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO build
+          (cd build/sim/Build/Products/Debug-iphonesimulator && zip -qry "$GITHUB_WORKSPACE/gwiga-ios-simulator.zip" App.app)
+      - name: 아이폰용 빌드 (서명 없음)
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath build/dev CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+          mkdir -p ipa/Payload && cp -R build/dev/Build/Products/Release-iphoneos/App.app ipa/Payload/
+          (cd ipa && zip -qry "$GITHUB_WORKSPACE/gwiga-ios-unsigned.ipa" Payload)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gwiga-ios-unsigned
+          path: gwiga-ios-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gwiga-ios-simulator
+          path: gwiga-ios-simulator.zip
