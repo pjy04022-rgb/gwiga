@@ -1,8 +1,9 @@
-/* 오프라인 캐시. 앱 파일을 고치면 CACHE 버전을 올린다. */
-var CACHE = 'gwiga-v8';
+/* 오프라인 캐시. 앱 파일을 고치면 CACHE 버전을 올린다.
+ * 화면 파일은 인터넷이 되면 늘 최신을 먼저 받고(3초 안에 안 오면 저장본), 인터넷이 없을 때만 저장본을 쓴다. */
+var CACHE = 'gwiga-v9';
 var SHELL = [
   './', 'index.html', 'css/style.css',
-  'js/util.js', 'js/native.js', 'js/install.js', 'js/alarms.js', 'js/model.js', 'js/group-logic.js', 'js/config.js', 'js/plan.js', 'js/pledge.js', 'js/calc.js',
+  'js/util.js', 'js/native.js', 'js/install.js', 'js/update.js', 'js/alarms.js', 'js/model.js', 'js/group-logic.js', 'js/config.js', 'js/plan.js', 'js/pledge.js', 'js/calc.js',
   'js/group-store.js', 'js/group.js', 'js/main.js',
   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'
 ];
@@ -23,15 +24,21 @@ self.addEventListener('fetch', function (e) {
   var isFont = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   if (url.origin !== location.origin && !isFont) return;
 
-  e.respondWith(caches.match(e.request).then(function (hit) {
-    var net = fetch(e.request).then(function (res) {
-      if (res && (res.ok || res.type === 'opaque')) {
-        var copy = res.clone();
-        caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
-      }
-      return res;
-    }).catch(function () { return hit || caches.match('index.html'); });
-    return hit || net;
+  function save(res) {
+    if (res && (res.ok || res.type === 'opaque')) { var copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(e.request, copy); }); }
+    return res;
+  }
+  if (isFont) {   // 글꼴은 바뀌지 않으므로 저장본 먼저
+    e.respondWith(caches.match(e.request).then(function (hit) { return hit || fetch(e.request).then(save); }));
+    return;
+  }
+  e.respondWith(new Promise(function (resolve) {
+    var done = false;
+    function finish(r) { if (!done && r) { done = true; resolve(r); } }
+    var fallback = function () { return caches.match(e.request).then(function (hit) { return hit || caches.match('index.html'); }); };
+    var timer = setTimeout(function () { fallback().then(finish); }, 3000);
+    fetch(e.request, { cache: 'no-cache' }).then(save).then(function (r) { clearTimeout(timer); finish(r); },
+      function () { clearTimeout(timer); fallback().then(function (r) { finish(r || Response.error()); }); });
   }));
 });
 

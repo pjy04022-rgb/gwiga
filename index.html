@@ -25,6 +25,7 @@
 <header class="bar">
   <div class="bar-in wrap">
     <a class="brand" href="#plan"><b>귀가약속</b><span>0.03</span></a>
+    <button class="getapp" type="button" id="getapp" hidden>앱 받기</button>
     <nav class="tabs" aria-label="화면">
       <a href="#plan" data-tab="plan">술자리 계획</a>
       <a href="#group" data-tab="group">모임</a>
@@ -40,6 +41,10 @@
     <div class="install-head">
       <p class="alarm-text"><b id="ins-title">앱으로 받기</b><span id="ins-sub"></span></p>
       <button class="install-x" type="button" id="ins-close" aria-label="안내 닫기">×</button>
+    </div>
+    <div class="ins-tabs" id="ins-tabs" role="group" aria-label="휴대폰 종류" hidden>
+      <button type="button" data-p="android" aria-pressed="false">안드로이드</button>
+      <button type="button" data-p="ios" aria-pressed="false">아이폰</button>
     </div>
     <ol class="install-steps" id="ins-steps"></ol>
     <div class="btns" id="ins-btns"></div>
@@ -330,6 +335,7 @@
 <script src="js/util.js"></script>
 <script src="js/native.js"></script>
 <script src="js/install.js"></script>
+<script src="js/update.js"></script>
 <script src="js/alarms.js"></script>
 <script src="js/model.js"></script>
 <script src="js/group-logic.js"></script>

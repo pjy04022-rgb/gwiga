@@ -303,6 +303,12 @@ tbody tr:last-child td{border-bottom:0}
 .install-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .install .alarm-text span{color:var(--panel-muted)}
 .install-x{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--panel-line);background:transparent;color:var(--panel-ink);font-size:20px;line-height:1;cursor:pointer}
+.getapp{margin-left:auto;margin-right:12px;border:1px solid var(--amber);background:transparent;color:var(--amber);border-radius:999px;padding:5px 14px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.getapp:hover{background:var(--amber);color:var(--accent-ink)}
+@media (max-width:719px){.getapp{margin-right:0}}
+.ins-tabs{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--panel-line);border-radius:10px;overflow:hidden}
+.ins-tabs button{border:0;background:transparent;color:var(--panel-muted);font:inherit;font-size:14px;font-weight:700;padding:8px;cursor:pointer}
+.ins-tabs button[aria-pressed="true"]{background:var(--amber);color:var(--accent-ink)}
 .install-steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:4px;font-size:15px}
 .install-steps b{color:var(--amber)}
 .ins-more{font-size:14px;color:var(--panel-muted)}

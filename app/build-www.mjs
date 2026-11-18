@@ -14,7 +14,14 @@ for (const name of ['index.html', 'css', 'js', 'icons']) cpSync(join(root, name)
 
 // 앱에는 홈 화면 설치 정보(manifest)와 서비스 워커가 필요 없다.
 const htmlPath = join(www, 'index.html');
-writeFileSync(htmlPath, readFileSync(htmlPath, 'utf8').replace(/^<link rel="manifest"[^\n]*\n/m, ''));
+writeFileSync(htmlPath, readFileSync(htmlPath, 'utf8')
+  .replace(/^<link rel="manifest"[^\n]*\n/m, '')
+  .replace('<script src="js/util.js"></script>', '<script src="js/build.js"></script>\n<script src="js/util.js"></script>'));
+
+// 빌드 번호: GitHub에서 빌드하면 릴리스 번호와 같아, 앱이 새 버전이 나왔는지 알 수 있다(js/update.js).
+const wf = process.env.GITHUB_WORKFLOW || '';
+const build = { run: Number(process.env.GITHUB_RUN_NUMBER || 0), platform: /아이폰|ios/i.test(wf) ? 'ios' : 'android', builtAt: new Date().toISOString() };
+writeFileSync(join(www, 'js', 'build.js'), 'window.GWIGA_BUILD = ' + JSON.stringify(build) + ';\n');
 
 // 상태 표시줄·내비게이션 바 여백: 오래된 안드로이드 웹뷰는 env(safe-area-inset-*)가 0이라
 // Capacitor가 넣어 주는 --safe-area-inset-* 값을 먼저 쓴다.

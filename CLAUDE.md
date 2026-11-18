@@ -18,6 +18,8 @@ index.html              화면 마크업 (다섯 화면: #plan #group #pledge #c
 css/style.css           디자인 토큰(:root)과 전체 스타일, 라이트/다크 테마
 js/util.js              공용 함수 (저장소, 날짜, 조사 처리, 토스트, 화면 간 이벤트)
 js/native.js            설치형 앱(안드로이드)에서만 쓰는 기능: 공유 창, 파일 내보내기, 예약 알림·알림 채널. 웹에서는 G.native가 null
+js/install.js           앱 받기 안내(위쪽 "앱 받기" 버튼, 안드로이드 APK·아이폰 홈 화면 추가/.ipa). 휴대폰에 맞는 안내를 처음 한 번 자동으로 띄움
+js/update.js            설치형 앱의 새 버전 알림(GitHub 릴리스 확인). 빌드 번호는 app/build-www.mjs가 js/build.js에 넣음
 js/alarms.js            알림 공통(G.alarms): 앱은 휴대폰에 예약(앱을 꺼도 울림), 웹은 탭이 열려 있을 때만. 계획·모임이 함께 씀
 js/model.js             숙취 계산식(위드마크) — 순수 함수
 js/group-logic.js       모임 모드 규칙(상태 판정, 참가 검증, 마무리 조건) — 순수 함수
@@ -65,7 +67,7 @@ app/                    안드로이드·아이폰 앱(Capacitor). 웹 파일을
 - 로컬 확인: `python3 -m http.server 8000` 후 http://localhost:8000 (서비스 워커는 file://에서 동작하지 않음)
 - 계산식이나 모임 규칙을 바꾸면 `node tools/check.mjs`를 돌린다.
 - 서버 규칙을 바꾸면 로컬 Postgres에 schema.sql을 불러온 뒤 `psql -v ON_ERROR_STOP=1 -f supabase/test.sql`로 시험한다(anon·authenticated 역할을 먼저 만들 것).
-- 파일을 바꾸면 `sw.js`의 `CACHE` 값을 올려야 설치된 웹앱이 새 버전을 받는다. 안드로이드 앱은 main에 올리면 GitHub Actions가 새 APK를 만든다.
+- 웹은 sw.js가 인터넷이 되면 늘 최신 파일을 먼저 받고, 새 서비스 워커가 설치되면 한 번 새로 고친다. 파일 목록을 바꾸면 `sw.js`의 `CACHE` 값과 SHELL 목록을 고친다. 안드로이드 앱은 main에 올리면 GitHub Actions가 새 APK를 만든다.
 - 색은 css의 토큰(`--ink`, `--accent` 등)으로만 쓰고, 라이트/다크 둘 다 확인한다.
 - 화면 문구를 추가하면 위 1번 원칙의 금지 표현이 없는지 검색한다: `grep -rn "운전 가능\|안전합\|괜찮습\|운전해도" index.html js/`
   (calc.js의 "운전해도 된다는 뜻이 아닙니다", "운전 가능 여부를 알려주지 않습니다"는 부정문이라 허용)

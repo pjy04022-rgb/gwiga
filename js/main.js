@@ -35,7 +35,18 @@
   /* 오프라인 사용·홈 화면 설치 (일반 웹 주소에서만) */
   if ('serviceWorker' in navigator && !G.inArtifact && !G.native && /^https?:$/.test(location.protocol)) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('sw.js').catch(function () {});
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (reg) {
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) reg.update().catch(function () {}); });
+      }, function () {});
+    });
+    /* 새 버전이 설치되면 한 번 새로 고친다(처음 설치할 때와 입력 중일 때는 제외) */
+    var hadController = !!navigator.serviceWorker.controller, reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!hadController || reloading) { hadController = true; return; }
+      var go = function () { if (reloading) return; reloading = true; location.reload(); };
+      var a = document.activeElement;
+      if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) document.addEventListener('visibilitychange', function () { if (document.hidden) go(); }, { once: true });
+      else go();
     });
   }
 })();
